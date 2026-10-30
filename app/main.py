@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,HTTPException,status
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -16,6 +16,8 @@ def get_tickets():
 
 @app.get("/tickets/{id}")
 def get_tickets(id : int):
+    if id not in tickets:
+        raise HTTPException(status.HTTP_404_NOT_FOUND,f"Ticket with id {id} not found.")
     return tickets[id]
 
 @app.post("/tickets")
