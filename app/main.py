@@ -1,5 +1,11 @@
+from sqlalchemy import text
 from fastapi import FastAPI,HTTPException,status
 from pydantic import BaseModel
+from database import engine,SessionLocal,Base
+import models
+
+# Create Table if not found
+Base.metadata.create_all(engine)
 
 app = FastAPI()
 
@@ -15,7 +21,7 @@ def get_tickets():
     return tickets
 
 @app.get("/tickets/{id}")
-def get_tickets(id : int):
+def get_ticket(id : int):
     if id not in tickets:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f"Ticket with id {id} not found.")
     return tickets[id]
