@@ -60,6 +60,26 @@ def get_user(user_id: int, db: SessionDep):
         )
 
 
+@app.get("/users/{user_id}/tickets", response_model=list[TicketResponse])
+def get_user_tickets(user_id: int, db: SessionDep):
+    user = (
+        db.execute(select(models.User).where(models.User.id == user_id))
+        .scalars()
+        .first()
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+        )
+
+    tickets = (
+        db.execute(select(models.Ticket).where(models.Ticket.customer_id == user_id))
+        .scalars()
+        .all()
+    )
+    return tickets
+
+
 @app.post(
     "/tickets", response_model=TicketResponse, status_code=status.HTTP_201_CREATED
 )
