@@ -24,6 +24,8 @@ class User(Base):
         back_populates="agent", foreign_keys="Ticket.agent_id"
     )
 
+    messages: Mapped[list[Message]] = relationship(back_populates="author")
+
 
 class Ticket(Base):
     __tablename__ = "tickets"
@@ -44,3 +46,26 @@ class Ticket(Base):
     agent: Mapped[User | None] = relationship(
         back_populates="assigned_tickets", foreign_keys=[agent_id]
     )
+
+    messages: Mapped[list[Message]] = relationship(
+        back_populates="ticket",
+        order_by="Message.date_created",
+        cascade="all, delete-orphan",
+    )
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    content: Mapped[str]
+    ticket_id: Mapped[int] = mapped_column(
+        ForeignKey("tickets.id"), nullable=False, index=True
+    )
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    date_created: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    ticket: Mapped[Ticket] = relationship(back_populates="messages")
+    author: Mapped[User] = relationship(back_populates="messages")
