@@ -38,4 +38,27 @@ def get_user(user_id: int, db: SessionDep):
     if user:
         return user
     else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="User not found.")
+
+@app.post("/tickets",response_model=TicketResponse,status_code=status.HTTP_201_CREATED)
+def create_ticket(ticket: TicketCreate, db : SessionDep):
+    # Check if user exists
+    user = db.execute(select(models.User).where(models.User.id == ticket.customer_id)).scalars().first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="User not found.")
+
+    # Create ticket and add to database
+    new_ticket = models.Ticket(title=ticket.title,content=ticket.content,customer_id=ticket.customer_id)
+    db.add(new_ticket)
+    db.commit()
+    db.refresh(new_ticket)
+
+    return new_ticket
+
+@app.get("/tickets/{ticket_id}",response_model=TicketResponse)
+def get_ticket(ticket_id: int, db: SessionDep):
+    ticket = db.execute(select(models.Ticket).where(models.Ticket.id == ticket_id)).scalars().first()
+    if ticket:
+        return ticket
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Ticket not found.")
