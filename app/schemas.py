@@ -30,6 +30,14 @@ class TicketCreate(TicketBase):
     pass
 
 
+class TicketStatusUpdate(BaseModel):
+    status: TicketStatus
+
+
+class TicketAssign(BaseModel):
+    agent_id: int | None
+
+
 class TicketResponse(TicketBase):
     model_config = ConfigDict(from_attributes=True)
 

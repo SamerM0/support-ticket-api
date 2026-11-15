@@ -6,8 +6,10 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from schemas import (
     MessageCreate,
     MessageResponse,
+    TicketAssign,
     TicketCreate,
     TicketResponse,
+    TicketStatusUpdate,
     UserCreate,
     UserResponse,
 )
@@ -124,6 +126,53 @@ def get_ticket(ticket_id: int, db: SessionDep):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found."
         )
+
+
+@app.patch("/tickets/{ticket_id}/status", response_model=TicketResponse)
+def update_ticket_status(
+    ticket_id: int, ticket_data: TicketStatusUpdate, db: SessionDep
+):
+    ticket = (
+        db.execute(select(models.Ticket).where(models.Ticket.id == ticket_id))
+        .scalars()
+        .first()
+    )
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found."
+        )
+
+    ticket.status = ticket_data.status
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
+@app.patch("/tickets/{ticket_id}/assign", response_model=TicketResponse)
+def update_ticket_agent(ticket_id: int, ticket_data: TicketAssign, db: SessionDep):
+    ticket = (
+        db.execute(select(models.Ticket).where(models.Ticket.id == ticket_id))
+        .scalars()
+        .first()
+    )
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found."
+        )
+    user = (
+        db.execute(select(models.User).where(models.User.id == ticket_data.agent_id))
+        .scalars()
+        .first()
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+        )
+
+    ticket.agent_id = ticket_data.agent_id
+    db.commit()
+    db.refresh(ticket)
+    return ticket
 
 
 # ---------- Message endpoints ----------
