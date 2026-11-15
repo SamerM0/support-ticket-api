@@ -37,3 +37,19 @@ class TicketResponse(TicketBase):
     status: TicketStatus
     date_created: datetime
     agent_id: int | None = None
+
+
+class MessageBase(BaseModel):
+    content: str
+    author_id: int
+
+
+class MessageCreate(MessageBase):
+    pass
+
+
+class MessageResponse(MessageBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    date_created: datetime
