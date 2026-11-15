@@ -1,12 +1,12 @@
 from datetime import datetime
 
 from enums import TicketStatus, UserRole
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserBase(BaseModel):
-    username: str
-    email: EmailStr
+    username: str = Field(min_length=1, max_length=20)
+    email: EmailStr = Field(min_length=1, max_length=80)
 
 
 class UserCreate(UserBase):
@@ -21,8 +21,8 @@ class UserResponse(UserBase):
 
 
 class TicketBase(BaseModel):
-    title: str
-    content: str
+    title: str = Field(min_length=1, max_length=100)
+    content: str = Field(min_length=1)
     customer_id: int
 
 
@@ -40,7 +40,7 @@ class TicketResponse(TicketBase):
 
 
 class MessageBase(BaseModel):
-    content: str
+    content: str = Field(min_length=1)
     author_id: int
 
 
