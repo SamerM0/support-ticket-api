@@ -3,7 +3,14 @@ from typing import Annotated
 import models
 from database import Base, engine, get_db
 from fastapi import Depends, FastAPI, HTTPException, status
-from schemas import TicketCreate, TicketResponse, UserCreate, UserResponse
+from schemas import (
+    MessageCreate,
+    MessageResponse,
+    TicketCreate,
+    TicketResponse,
+    UserCreate,
+    UserResponse,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,6 +22,7 @@ SessionDep = Annotated[Session, Depends(get_db)]
 app = FastAPI()
 
 
+# ---------- User Endpoints ----------
 @app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: SessionDep):
     # Check if username or email already exist in database
@@ -60,6 +68,7 @@ def get_user(user_id: int, db: SessionDep):
         )
 
 
+# Get user tickets
 @app.get("/users/{user_id}/tickets", response_model=list[TicketResponse])
 def get_user_tickets(user_id: int, db: SessionDep):
     user = (
@@ -72,14 +81,10 @@ def get_user_tickets(user_id: int, db: SessionDep):
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
         )
 
-    tickets = (
-        db.execute(select(models.Ticket).where(models.Ticket.customer_id == user_id))
-        .scalars()
-        .all()
-    )
-    return tickets
+    return user.created_tickets
 
 
+# ---------- Ticket Endpoints ----------
 @app.post(
     "/tickets", response_model=TicketResponse, status_code=status.HTTP_201_CREATED
 )
@@ -119,3 +124,56 @@ def get_ticket(ticket_id: int, db: SessionDep):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found."
         )
+
+
+# ---------- Message endpoints ----------
+@app.post(
+    "/tickets/{ticket_id}/messages",
+    response_model=MessageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_message(message: MessageCreate, ticket_id: int, db: SessionDep):
+    ticket = (
+        db.execute(select(models.Ticket).where(models.Ticket.id == ticket_id))
+        .scalars()
+        .first()
+    )
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found."
+        )
+
+    user = (
+        db.execute(select(models.User).where(models.User.id == message.author_id))
+        .scalars()
+        .first()
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+        )
+
+    # Create message and add to database
+    new_message = models.Message(
+        content=message.content, ticket_id=ticket_id, author_id=message.author_id
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+
+    return new_message
+
+
+# Get ticket messages
+@app.get("/tickets/{ticket_id}/messages", response_model=list[MessageResponse])
+def get_ticket_messages(ticket_id: int, db: SessionDep):
+    ticket = (
+        db.execute(select(models.Ticket).where(models.Ticket.id == ticket_id))
+        .scalars()
+        .first()
+    )
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found."
+        )
+    return ticket.messages
