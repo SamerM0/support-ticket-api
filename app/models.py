@@ -14,8 +14,8 @@ class User(Base):
 
     role: Mapped[UserRole] = mapped_column(default=UserRole.CUSTOMER)
 
-    created_tickets: Mapped[list[Ticket]] = relationship(back_populates="customer")
-    assigned_tickets: Mapped[list[Ticket]] = relationship(back_populates="agent")
+    created_tickets: Mapped[list[Ticket]] = relationship(back_populates="customer",foreign_keys="Ticket.customer_id")
+    assigned_tickets: Mapped[list[Ticket]] = relationship(back_populates="agent",foreign_keys="Ticket.agent_id")
 
 class Ticket(Base):
     __tablename__ = "tickets"
@@ -28,5 +28,5 @@ class Ticket(Base):
     status: Mapped[TicketStatus] = mapped_column(default=TicketStatus.OPEN)
     date_created: Mapped[datetime] = mapped_column(DateTime(timezone=True),default=lambda: datetime.now(UTC))
 
-    customer: Mapped[User] = relationship(back_populates="created_tickets")
-    agent: Mapped[User] = relationship(back_populates="assigned_tickets")
+    customer: Mapped[User] = relationship(back_populates="created_tickets",foreign_keys=[customer_id])
+    agent: Mapped[User | None] = relationship(back_populates="assigned_tickets",foreign_keys=[agent_id])
