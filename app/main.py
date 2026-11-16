@@ -175,6 +175,22 @@ def update_ticket_agent(ticket_id: int, ticket_data: TicketAssign, db: SessionDe
     return ticket
 
 
+@app.delete("/tickets/{ticket_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_ticket(ticket_id: int, db: SessionDep):
+    ticket = (
+        db.execute(select(models.Ticket).where(models.Ticket.id == ticket_id))
+        .scalars()
+        .first()
+    )
+    if not ticket:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found."
+        )
+
+    db.delete(ticket)
+    db.commit()
+
+
 # ---------- Message endpoints ----------
 @app.post(
     "/tickets/{ticket_id}/messages",
