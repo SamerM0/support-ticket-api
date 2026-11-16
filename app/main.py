@@ -12,6 +12,8 @@ from schemas import (
     TicketStatusUpdate,
     UserCreate,
     UserResponse,
+    UserUpdateData,
+    UserUpdateRole,
 )
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -68,6 +70,93 @@ def get_user(user_id: int, db: SessionDep):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
         )
+
+
+@app.patch("/users/{user_id}", response_model=UserResponse)
+def update_user(user_id: int, user_data: UserUpdateData, db: SessionDep):
+    user = (
+        db.execute(select(models.User).where(models.User.id == user_id))
+        .scalars()
+        .first()
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+        )
+
+    if user_data.username is not None and user_data.username != user.username:
+        existing_username = (
+            db.execute(
+                select(models.User).where(models.User.username == user_data.username)
+            )
+            .scalars()
+            .first()
+        )
+        if existing_username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists.",
+            )
+
+    if user_data.email is not None and user_data.email != user.email:
+        existing_email = (
+            db.execute(select(models.User).where(models.User.email == user_data.email))
+            .scalars()
+            .first()
+        )
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already exists.",
+            )
+
+    new_data = user_data.model_dump(exclude_none=True, exclude_unset=True)
+
+    for field, value in new_data.items():
+        setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.patch("/users/{user_id}/role", response_model=UserResponse)
+def update_user_role(user_id: int, user_role: UserUpdateRole, db: SessionDep):
+    user = (
+        db.execute(select(models.User).where(models.User.id == user_id))
+        .scalars()
+        .first()
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+        )
+
+    user.role = user_role.role
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: int, db: SessionDep):
+    user = (
+        db.execute(select(models.User).where(models.User.id == user_id))
+        .scalars()
+        .first()
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+        )
+    if user.created_tickets or user.messages:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User has tickets or messages.",
+        )
+    for ticket in user.assigned_tickets:
+        ticket.agent_id = None
+    db.delete(user)
+    db.commit()
 
 
 # Get user tickets
