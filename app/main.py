@@ -19,6 +19,7 @@ from schemas import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from enums import UserRole
 
 
 @asynccontextmanager
@@ -245,14 +246,19 @@ async def update_ticket_agent(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found."
         )
-    result = await db.execute(
-        select(models.User).where(models.User.id == ticket_data.agent_id)
-    )
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+    if ticket_data.agent_id is not None:
+        result = await db.execute(
+            select(models.User).where(models.User.id == ticket_data.agent_id)
         )
+        user = result.scalars().first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+            )
+        if user.role != UserRole.AGENT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="User is not an agent."
+            )
 
     ticket.agent_id = ticket_data.agent_id
     await db.commit()
