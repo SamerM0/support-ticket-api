@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from enums import TicketStatus, UserRole
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+from app.enums import TicketStatus, UserRole
 
 
 # ---------- User Schemas ----------
